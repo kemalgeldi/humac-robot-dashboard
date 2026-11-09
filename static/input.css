@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .panel-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Scrollbar for tables */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0B0F19;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    
+
+        body {
+            transition: background-color 0.3s ease;
+        }
+
+        .emergency-active {
+            background-color: #3a0000 !important;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0B0F19;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .red-glow {
+            box-shadow: 0 0 30px rgba(255, 0, 60, 0.6);
+        }
+
+        .panel-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .video-container {
+            position: relative;
+        }
+
+        .video-container::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .d-pad-btn {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.2s;
+        }
+
+        .d-pad-disabled {
+            opacity: 0.3 !important;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+
+        /* E-Stop Engaged Animation */
+        .estop-engaged {
+            border-color: #ff0000 !important;
+            transform: scale(0.95) !important;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.8) inset !important;
+        }
+
+        /* Mission Start Button Styles */
+        .mission-start-active {
+            background-image: linear-gradient(to bottom, #10b981, #047857) !important;
+            /* Green gradient */
+            border-color: #065f46 !important;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6) inset !important;
+            color: #ecfdf5 !important;
+            cursor: default !important;
+            pointer-events: none;
+        }
+    
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .panel-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    
+button:disabled { opacity: .45; cursor: not-allowed; }
+#estop-btn:disabled { opacity: .7; }

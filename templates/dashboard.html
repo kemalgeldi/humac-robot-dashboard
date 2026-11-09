@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Palm Harvester Command Center</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <!-- ROSLibJS Dependencies -->
+    <script type="text/javascript" src="{{ url_for('static', filename='vendor/roslib-1.4.1.js') }}"></script>
+</head>
+
+<body class="bg-dark text-white font-sans min-h-screen p-4 flex flex-col gap-6" id="main-body">
+
+    <!-- HEADER -->
+    <header
+        class="bg-panel panel-border rounded-xl p-4 flex flex-col xl:flex-row justify-between items-center shadow-lg">
+        <div class="flex flex-wrap items-center gap-4 mb-4 xl:mb-0 w-full xl:w-auto justify-between xl:justify-start">
+            <div class="flex items-center gap-4">
+                <div class="h-10 w-10 bg-neon rounded-full flex items-center justify-center shadow-[0_0_15px_#00F0FF]">
+                    <svg class="w-6 h-6 text-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-2xl font-bold tracking-wider flex flex-wrap items-center gap-2">HARVESTER<span
+                            class="text-neon">_OS</span> <span id="manual-mode-badge"
+                            class="hidden text-[10px] font-mono bg-yellow-900/50 border border-yellow-500/50 text-yellow-300 px-2 py-0.5 rounded shadow-inner items-center gap-1"><span
+                                class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span> MANUAL MODE</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 font-mono">ROS_NOETIC | LOCAL OPERATOR CONSOLE</p>
+                </div>
+            </div>
+
+            <!-- Auth Controls (Mobile) -->
+            <div class="xl:hidden flex items-center justify-end gap-2 w-full">
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('admin_panel') }}"
+                    class="text-xs bg-slate-800 border border-slate-600 px-3 py-1 rounded text-slate-300 hover:text-white transition-colors">ADMIN</a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('logout') }}" data-logout><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="text-xs bg-alert/20 border border-alert/50 text-alert px-3 py-1 rounded hover:bg-alert/40 transition-colors">LOGOUT</button></form>
+            </div>
+        </div>
+
+        <div class="flex flex-col xl:flex-row items-center gap-4 w-full xl:w-auto">
+            <!-- Connection Controls -->
+            <div
+                class="flex items-center justify-center xl:justify-start gap-2 sm:gap-4 bg-dark p-2 rounded-lg border border-slate-700 w-full xl:w-auto">
+                <div id="status-indicator" class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                <span id="status-text" class="font-mono text-sm text-slate-300 shrink-0 w-auto sm:w-24">OFFLINE</span>
+                <input type="text" id="jetson-ip" value=""
+                    class="bg-panel border border-slate-600 text-white font-mono px-3 py-1 rounded focus:outline-none focus:border-neon min-w-0 flex-1 w-24 sm:w-40"
+                    placeholder="Robot IP / host">
+                <button id="connect-btn"
+                    class="shrink-0 bg-slate-700 hover:bg-slate-600 transition-colors px-4 py-1 rounded font-bold text-sm">CONNECT</button>
+            </div>
+
+            <!-- Auth Controls (Desktop) -->
+            <div class="hidden xl:flex items-center gap-3">
+                <div class="flex flex-col items-end mr-2">
+                    <span class="text-xs font-mono text-slate-400">OPERATOR:</span>
+                    <span class="text-sm font-bold text-neon">{{ current_user.username }}</span>
+                </div>
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('admin_panel') }}"
+                    class="text-xs font-bold font-mono tracking-wider bg-slate-800 border border-slate-600 px-4 py-2 rounded text-slate-300 hover:text-white hover:border-slate-400 transition-colors shadow">ADMIN
+                    PANEL</a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('logout') }}" data-logout><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="text-xs font-bold font-mono tracking-wider bg-alert/10 border border-alert/30 text-alert px-4 py-2 rounded hover:bg-alert/20 hover:border-alert/50 transition-colors">LOGOUT</button></form>
+            </div>
+        </div>
+    </header>
+
+    <p class="text-xs text-yellow-400 font-mono">Software stop only. Confirm robot telemetry and keep the physical emergency stop accessible.</p>
+
+    <!-- TELEMETRY CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-panel panel-border rounded-xl p-5 flex flex-col justify-between">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">System State</h3>
+            <div id="val-state" class="text-3xl font-mono font-bold text-neon neon-text uppercase">UNKNOWN</div>
+        </div>
+        <div class="bg-panel panel-border rounded-xl p-5 flex flex-col justify-between">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Trees Harvested</h3>
+            <div id="val-trees" class="text-3xl font-mono font-bold text-white">0</div>
+        </div>
+        <div class="bg-panel panel-border rounded-xl p-5 flex flex-col justify-between">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Video FPS (unavailable)</h3>
+            <div id="val-fps" class="text-3xl font-mono font-bold text-green-400">0</div>
+        </div>
+        <div class="bg-panel panel-border rounded-xl p-5 flex flex-col justify-between">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">GNSS Fix</h3>
+            <div id="val-gps" class="text-lg font-mono font-bold text-yellow-400">NO FIX</div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTROL AREA -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-grow">
+
+        <!-- Video Stream -->
+        <div class="lg:col-span-2 bg-panel panel-border rounded-xl p-2 flex flex-col shadow-lg">
+            <div class="px-3 py-2 border-b border-slate-700 mb-2 flex justify-between">
+                <span class="text-xs font-mono text-slate-400">CAM_01 /camera/color/image_raw</span>
+                <span id="video-live" class="text-xs font-mono text-slate-400">NO SIGNAL</span>
+            </div>
+            <div
+                class="video-container bg-black flex-grow rounded-lg overflow-hidden flex items-center justify-center min-h-[400px]">
+                <img id="video-stream"  alt="NO SIGNAL"
+                    class="w-full h-full object-contain text-slate-600 font-mono text-2xl hidden">
+                <div id="video-placeholder" class="text-slate-600 font-mono text-base sm:text-2xl text-center break-words max-w-full">AWAITING CONNECTION...</div>
+            </div>
+            <!-- Bandwidth Optimized Label -->
+            <div class="px-3 py-2 text-right">
+                <span class="text-xs font-mono text-green-400">Local robot connection required</span>
+            </div>
+        </div>
+
+        <!-- Controls Column -->
+        <div class="flex flex-col gap-6">
+
+            <!-- Manual Override (D-Pad) -->
+            <div
+                class="bg-panel panel-border rounded-xl p-4 flex flex-col items-center justify-center shadow-lg relative flex-grow">
+                <div class="w-full flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest">Teleop D-Pad</h3>
+                    <span id="active-key-indicator"
+                        class="text-[10px] font-mono bg-dark border border-slate-600 text-slate-400 px-2 py-0.5 rounded shadow-inner">KEY:
+                        NONE</span>
+                </div>
+
+                <div class="w-full flex items-center justify-between gap-2 mb-3">
+                    <span class="text-xs font-mono text-slate-400">MANUAL OVERRIDE</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="manual-override-toggle" disabled value="" class="sr-only peer"
+                            >
+                        <div
+                            class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neon">
+                        </div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 mt-2" id="dpad-container">
+                    <div></div>
+                    <button data-motion="0.5,0"
+                        disabled class="d-pad-btn w-16 h-16 bg-slate-700 hover:bg-neon hover:text-dark rounded-lg shadow-lg font-bold flex justify-center items-center text-xl">▲</button>
+                    <div></div>
+
+                    <button data-motion="0,0.5"
+                        disabled class="d-pad-btn w-16 h-16 bg-slate-700 hover:bg-neon hover:text-dark rounded-lg shadow-lg font-bold flex justify-center items-center text-xl">◀</button>
+                    <!-- All input paths share one stop routine. -->
+                    <button id="teleop-stop-btn"
+                        disabled class="d-pad-btn w-16 h-16 bg-slate-800 rounded-lg border border-slate-600 shadow-lg font-bold flex justify-center items-center text-xs text-slate-500 hover:text-white transition-colors">STOP</button>
+                    <button data-motion="0,-0.5"
+                        disabled class="d-pad-btn w-16 h-16 bg-slate-700 hover:bg-neon hover:text-dark rounded-lg shadow-lg font-bold flex justify-center items-center text-xl">▶</button>
+
+                    <div></div>
+                    <button data-motion="-0.5,0"
+                        disabled class="d-pad-btn w-16 h-16 bg-slate-700 hover:bg-neon hover:text-dark rounded-lg shadow-lg font-bold flex justify-center items-center text-xl">▼</button>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Mission Start & Hold Controls -->
+            <div
+                class="bg-panel panel-border rounded-xl p-4 flex flex-col justify-center items-center shadow-lg relative h-[180px] gap-4">
+                <button id="start-mission-btn" disabled 
+                    class="w-full flex-1 rounded-xl bg-gradient-to-b from-blue-600 to-blue-800 border-2 border-blue-900 text-white font-bold text-xl tracking-wider shadow-[0_0_15px_rgba(37,99,235,0.5)] transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span id="start-mission-text">START MISSION</span>
+                </button>
+                <button id="hold-resume-btn" disabled 
+                    class="w-full flex-1 rounded-xl bg-gradient-to-b from-orange-500 to-orange-700 border-2 border-orange-800 text-white font-bold text-xl tracking-wider shadow-[0_0_15px_rgba(249,115,22,0.5)] transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span id="hold-resume-text">PAUSE</span>
+                </button>
+            </div>
+
+            <!-- Software stop: requires independent hardware stop and robot-side watchdog. -->
+            <div
+                class="bg-panel panel-border rounded-xl p-6 flex flex-col justify-center items-center shadow-lg relative overflow-hidden h-48">
+                <div
+                    class="absolute top-0 w-full h-2 bg-gradient-to-r from-transparent via-alert to-transparent opacity-50">
+                </div>
+                <button id="estop-btn" disabled 
+                    class="w-full h-full rounded-2xl bg-gradient-to-b from-[#ff3333] to-[#990000] border-4 border-[#330000] text-white font-black text-3xl tracking-widest red-glow transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center flex-col">
+                    <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                    <span id="estop-text">E-STOP</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ROS LOGS TERMINAL -->
+    <div class="bg-black panel-border rounded-xl p-4 shadow-lg h-96 flex flex-col">
+        <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-mono text-slate-400">/rosout_agg terminal</span>
+                <span
+                    class="text-[10px] font-mono bg-blue-900/50 border border-blue-500/50 text-blue-300 px-2 py-0.5 rounded shadow-inner flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                    Filter Active
+                </span>
+            </div>
+            <button id="clear-logs-btn"
+                class="text-xs text-slate-500 hover:text-white">Clear</button>
+        </div>
+        <div id="ros-logs"
+            class="flex-grow overflow-y-auto font-mono text-xs leading-relaxed break-all pr-2 scroll-smooth">
+            <div class="text-slate-500">System initialized. Awaiting user connection...</div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>
+</body>
+</html>

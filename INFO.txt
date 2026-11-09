@@ -1,0 +1,7 @@
+HUMAC / HARVESTER_OS dashboard
+
+Setup, operator account creation, robot prerequisites, controls and GitHub upload
+instructions are documented in README.md.
+
+No passwords or session keys are distributed with this project.
+The local harvester.db account database is excluded by .gitignore.
